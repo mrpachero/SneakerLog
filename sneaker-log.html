@@ -251,14 +251,43 @@
     margin-bottom:12px;
   }
   .sneaker-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:8px 0;
+    display:block;
+    padding:10px 0;
     border-bottom:1px solid var(--line);
     font-size:14px;
   }
   .sneaker-row .name{ font-weight:500; }
+  .sneaker-row .retired-badge{
+    color:var(--tag);
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:0.5px;
+    margin-left:6px;
+  }
+  .sneaker-row .top-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .sneaker-row .sub-inputs{
+    display:flex;
+    gap:8px;
+    margin-top:8px;
+  }
+  .sneaker-row .sub-inputs input{
+    font-size:12px;
+    padding:6px 8px;
+  }
+  .sneaker-row .sub-inputs input[type="number"]{ width:90px; flex-shrink:0; }
+  .sneaker-row .sub-inputs input[type="date"]{ flex:1; }
+  .sneaker-row .sub-inputs .mini-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    color:var(--muted);
+    text-transform:uppercase;
+    display:block;
+    margin-bottom:3px;
+  }
   .sneaker-row .del{
     color:var(--muted);
     background:none;
@@ -272,7 +301,8 @@
     gap:8px;
     margin-top:10px;
   }
-  .add-sneaker-form input{ flex:1; }
+  .add-sneaker-form input[type="text"]{ flex:1; }
+  .add-sneaker-form input[type="number"]{ width:90px; flex-shrink:0; }
 
   .stat-grid{
     display:grid;
@@ -427,9 +457,11 @@
   <div class="tab-panel" id="panel-sneakers">
     <section>
       <h2 class="section-title">Sneaker Collection</h2>
+      <p class="settings-note" style="margin-top:0;">Set a price and, once a pair is done, a final date — it'll drop out of the picker for new entries after that date but stays in your stats.</p>
       <div id="sneaker-list"></div>
       <div class="add-sneaker-form">
         <input type="text" id="new-sneaker-name" placeholder="e.g. Pegasus 41">
+        <input type="number" id="new-sneaker-price" placeholder="price" step="0.01">
         <button class="btn small" onclick="addSneaker()">Add</button>
       </div>
     </section>
@@ -440,6 +472,12 @@
     <section>
       <h2 class="section-title">Stats</h2>
       <div class="stat-grid" id="stat-grid"></div>
+    </section>
+    <section>
+      <h2 class="section-title">Cost &amp; Value</h2>
+      <p class="settings-note" style="margin-top:0;">Amounts use whatever currency you entered prices in.</p>
+      <div class="stat-grid" id="cost-stat-grid"></div>
+      <div id="cost-list" style="margin-top:10px;"></div>
     </section>
     <section>
       <h2 class="section-title">Rotation Breakdown</h2>
@@ -597,6 +635,7 @@ function init(){
   renderSneakerList();
   renderReminderBanner();
   renderStats();
+  renderCostStats();
   renderRotationBars();
   renderWeatherBars();
   renderHistory();
@@ -618,14 +657,18 @@ function renderReminderBanner(){
 /* ---------- Sneakers ---------- */
 function addSneaker(){
   const input = document.getElementById('new-sneaker-name');
+  const priceInput = document.getElementById('new-sneaker-price');
   const name = input.value.trim();
   if(!name) return;
-  sneakers.push({ id: Date.now().toString(36), name });
+  const price = priceInput.value ? parseFloat(priceInput.value) : null;
+  sneakers.push({ id: Date.now().toString(36), name, price: (price!=null && !isNaN(price)) ? price : null, finalDate: null });
   input.value = '';
+  priceInput.value = '';
   persistSneakers();
   renderSneakerChips();
   renderSneakerList();
   renderReminderBanner();
+  renderCostStats();
   maybeAutoBackup();
 }
 
@@ -636,6 +679,23 @@ function deleteSneaker(id){
   renderSneakerChips();
   renderSneakerList();
   renderRotationBars();
+  renderCostStats();
+  maybeAutoBackup();
+}
+
+function updateSneakerField(id, field, value){
+  const s = sneakers.find(x => x.id === id);
+  if(!s) return;
+  if(field === 'price'){
+    const p = value ? parseFloat(value) : null;
+    s.price = (p!=null && !isNaN(p)) ? p : null;
+  } else if(field === 'finalDate'){
+    s.finalDate = value || null;
+  }
+  persistSneakers();
+  renderSneakerChips();
+  renderSneakerList();
+  renderCostStats();
   maybeAutoBackup();
 }
 
@@ -643,9 +703,15 @@ function renderSneakerChips(){
   const wrap = document.getElementById('sneaker-chips');
   const msg = document.getElementById('no-sneakers-msg');
   wrap.innerHTML = '';
-  if(!sneakers.length){ msg.style.display = 'block'; return; }
+  const dateVal = document.getElementById('entry-date').value || todayStr();
+  const available = sneakers.filter(s => !s.finalDate || s.finalDate >= dateVal);
+  if(!available.length){
+    msg.style.display = 'block';
+    msg.textContent = sneakers.length ? 'No sneakers were active on this date.' : 'Add a sneaker in the Sneakers tab first.';
+    return;
+  }
   msg.style.display = 'none';
-  sneakers.forEach(s => {
+  available.forEach(s => {
     const chip = document.createElement('div');
     chip.className = 'chip' + (s.id === selectedSneakerId ? ' selected' : '');
     chip.textContent = s.name;
@@ -662,14 +728,25 @@ function renderSneakerList(){
     return;
   }
   sneakers.forEach(s => {
+    const retired = s.finalDate && s.finalDate <= todayStr();
     const row = document.createElement('div');
     row.className = 'sneaker-row';
-    row.innerHTML = `<span class="name">${escapeHtml(s.name)}</span>`;
-    const del = document.createElement('button');
-    del.className = 'del';
-    del.textContent = 'remove';
-    del.onclick = () => deleteSneaker(s.id);
-    row.appendChild(del);
+    row.innerHTML = `
+      <div class="top-line">
+        <span class="name">${escapeHtml(s.name)}${retired ? '<span class="retired-badge">RETIRED '+s.finalDate+'</span>' : ''}</span>
+        <button class="del" onclick="deleteSneaker('${s.id}')">remove</button>
+      </div>
+      <div class="sub-inputs">
+        <div>
+          <span class="mini-label">Price</span>
+          <input type="number" step="0.01" placeholder="0.00" value="${s.price!=null ? s.price : ''}" onchange="updateSneakerField('${s.id}','price',this.value)">
+        </div>
+        <div style="flex:1;">
+          <span class="mini-label">Final date</span>
+          <input type="date" value="${s.finalDate || ''}" onchange="updateSneakerField('${s.id}','finalDate',this.value)">
+        </div>
+      </div>
+    `;
     wrap.appendChild(row);
   });
 }
@@ -789,6 +866,7 @@ function saveEntry(){
   msg.textContent = 'Saved.';
   renderReminderBanner();
   renderStats();
+  renderCostStats();
   renderRotationBars();
   renderWeatherBars();
   renderHistory();
@@ -821,6 +899,70 @@ function renderStats(){
     <div class="stat-box"><div class="num">${longest}</div><div class="lbl">longest streak</div></div>
     <div class="stat-box"><div class="num">${sneakers.length}</div><div class="lbl">sneakers in rotation</div></div>
   `;
+}
+
+function renderCostStats(){
+  const statGrid = document.getElementById('cost-stat-grid');
+  const listWrap = document.getElementById('cost-list');
+  if(!sneakers.length){
+    statGrid.innerHTML = '';
+    listWrap.innerHTML = '<p class="empty">No sneakers yet.</p>';
+    return;
+  }
+  const dates = Object.keys(entries).sort();
+  const wearCount = {}, firstWorn = {}, lastWorn = {};
+  dates.forEach(d => {
+    const id = entries[d].sneakerId;
+    wearCount[id] = (wearCount[id] || 0) + 1;
+    if(!firstWorn[id]) firstWorn[id] = d;
+    lastWorn[id] = d;
+  });
+
+  let totalInvested = 0, activeInvested = 0, priceSumForAvg = 0, wearSumForAvg = 0;
+  const rows = sneakers.map(s => {
+    const wears = wearCount[s.id] || 0;
+    const retired = s.finalDate && s.finalDate <= todayStr();
+    if(s.price != null){
+      totalInvested += s.price;
+      if(!retired) activeInvested += s.price;
+      if(wears > 0){ priceSumForAvg += s.price; wearSumForAvg += wears; }
+    }
+    const costPerWear = (s.price != null && wears > 0) ? (s.price / wears) : null;
+    let costPerDay = null;
+    const start = firstWorn[s.id];
+    const end = retired ? s.finalDate : todayStr();
+    if(s.price != null && start){
+      const days = Math.max(1, Math.round((new Date(end) - new Date(start)) / 86400000) + 1);
+      costPerDay = s.price / days;
+    }
+    return { s, wears, retired, costPerWear, costPerDay, lastWorn: lastWorn[s.id] };
+  });
+
+  const avgCostPerWear = wearSumForAvg ? (priceSumForAvg / wearSumForAvg) : null;
+  const best = rows.filter(r => r.costPerWear != null).sort((a,b) => a.costPerWear - b.costPerWear)[0];
+
+  statGrid.innerHTML = `
+    <div class="stat-box"><div class="num">${totalInvested.toFixed(0)}</div><div class="lbl">total invested</div></div>
+    <div class="stat-box"><div class="num">${activeInvested.toFixed(0)}</div><div class="lbl">active rotation value</div></div>
+    <div class="stat-box"><div class="num">${avgCostPerWear != null ? avgCostPerWear.toFixed(2) : '—'}</div><div class="lbl">avg cost / wear</div></div>
+    <div class="stat-box"><div class="num" style="font-size:14px;line-height:1.3;">${best ? escapeHtml(best.s.name) : '—'}</div><div class="lbl">best value pair</div></div>
+  `;
+
+  listWrap.innerHTML = '';
+  rows.sort((a,b) => b.wears - a.wears).forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'history-item';
+    const priceTxt = r.s.price != null ? r.s.price.toFixed(2) : 'no price set';
+    const cpwTxt = r.costPerWear != null ? `${r.costPerWear.toFixed(2)}/wear` : '';
+    const cpdTxt = r.costPerDay != null ? `${r.costPerDay.toFixed(2)}/day owned` : '';
+    const statusTxt = r.retired ? `retired ${r.s.finalDate}` : 'active';
+    row.innerHTML = `
+      <span>${escapeHtml(r.s.name)}</span>
+      <span class="d">${priceTxt} · ${r.wears}d${cpwTxt ? ' · '+cpwTxt : ''}${cpdTxt ? ' · '+cpdTxt : ''}</span>
+      <span class="d">${statusTxt}</span>
+    `;
+    listWrap.appendChild(row);
+  });
 }
 
 function renderRotationBars(){
