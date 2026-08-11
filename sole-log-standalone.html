@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Sole Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoad()"></script>
+<style>
+  :root{
+    --paper:#F1EDE3;
+    --paper-2:#E8E2D2;
+    --ink:#23261F;
+    --trail:#4B5D3A;
+    --trail-dark:#3A4A2C;
+    --tag:#C1622D;
+    --muted:#8A8471;
+    --line:#D8D2C2;
+    --white:#FBFAF6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    max-width:460px;
+    margin:0 auto;
+    padding:20px 16px 90px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:14px;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:10px;
+  }
+  header h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:0.5px;
+    margin:0;
+    text-transform:uppercase;
+  }
+  header span{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--muted);
+  }
+
+  /* Tabs */
+  #tabbar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:var(--white);
+    border-top:1.5px solid var(--ink);
+    display:flex;
+    max-width:460px;
+    margin:0 auto;
+    z-index:50;
+  }
+  #tabbar button{
+    flex:1;
+    background:none;
+    border:none;
+    padding:12px 4px 10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.4px;
+    text-transform:uppercase;
+    color:var(--muted);
+    cursor:pointer;
+    border-top:2.5px solid transparent;
+  }
+  #tabbar button.active{
+    color:var(--trail-dark);
+    border-top:2.5px solid var(--trail);
+    font-weight:600;
+  }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  #reminder-banner{
+    display:none;
+    background:var(--tag);
+    color:var(--white);
+    border-radius:6px;
+    padding:12px 14px;
+    margin-bottom:16px;
+    font-size:14px;
+    font-weight:500;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  #reminder-banner button{
+    background:var(--white);
+    color:var(--tag);
+    border:none;
+    border-radius:4px;
+    padding:6px 10px;
+    font-weight:600;
+    font-size:12px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+
+  .tag-card{
+    position:relative;
+    background:var(--white);
+    border-radius:10px;
+    padding:20px 18px 18px 30px;
+    margin-bottom:22px;
+    box-shadow:0 2px 0 var(--line), 0 8px 20px -12px rgba(35,38,31,0.35);
+    border:1px dashed var(--muted);
+  }
+  .tag-card::before{
+    content:"";
+    position:absolute;
+    left:12px;
+    top:20px;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:var(--paper);
+    border:2px solid var(--muted);
+  }
+  .tag-card::after{
+    content:"";
+    position:absolute;
+    left:18px;
+    top:12px;
+    width:1px;
+    height:9px;
+    background:var(--muted);
+  }
+  .tag-title{
+    font-family:'Oswald',sans-serif;
+    font-size:18px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin:0 0 14px 0;
+  }
+  label.field-label{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.8px;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+    margin-top:14px;
+  }
+  input[type="date"], input[type="text"], input[type="number"], input[type="time"], select{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .chip{
+    border:1.5px solid var(--line);
+    background:var(--paper);
+    border-radius:20px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    user-select:none;
+  }
+  .chip.selected{
+    background:var(--trail);
+    border-color:var(--trail);
+    color:var(--white);
+  }
+  .weather-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:8px;
+  }
+  .btn{
+    display:inline-block;
+    background:var(--trail);
+    color:var(--white);
+    border:none;
+    border-radius:6px;
+    padding:10px 14px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .btn.secondary{
+    background:transparent;
+    color:var(--trail-dark);
+    border:1.5px solid var(--trail);
+  }
+  .btn.ghost{
+    background:transparent;
+    color:var(--muted);
+    border:1.5px solid var(--line);
+  }
+  .btn.small{ padding:6px 10px; font-size:12px; }
+  .btn:disabled{ opacity:0.5; cursor:default; }
+  .weather-detected{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    background:var(--paper-2);
+    border-radius:6px;
+    padding:8px 10px;
+    margin-top:8px;
+  }
+  .save-row{
+    margin-top:16px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .save-msg{
+    font-size:12px;
+    color:var(--trail-dark);
+    font-weight:600;
+  }
+
+  section{ margin-bottom:26px; }
+  h2.section-title{
+    font-family:'Oswald',sans-serif;
+    font-size:15px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:6px;
+    margin-bottom:12px;
+  }
+  .sneaker-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .sneaker-row .name{ font-weight:500; }
+  .sneaker-row .del{
+    color:var(--muted);
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:12px;
+    text-decoration:underline;
+  }
+  .add-sneaker-form{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+  .add-sneaker-form input{ flex:1; }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .stat-box{
+    background:var(--white);
+    border-radius:8px;
+    padding:12px;
+    border:1px solid var(--line);
+  }
+  .stat-box .num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:22px;
+    font-weight:600;
+    color:var(--trail-dark);
+  }
+  .stat-box .lbl{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .bar-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+    font-size:13px;
+  }
+  .bar-row .bar-label{ width:88px; flex-shrink:0; }
+  .bar-track{
+    flex:1;
+    height:10px;
+    background:var(--paper-2);
+    border-radius:5px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    background:var(--trail);
+    border-radius:5px;
+  }
+  .bar-val{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--muted);
+    width:34px;
+    text-align:right;
+  }
+
+  .history-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-size:13px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .history-item .d{ font-family:'IBM Plex Mono',monospace; color:var(--muted); font-size:11px; }
+  .empty{
+    color:var(--muted);
+    font-size:13px;
+    padding:10px 0;
+  }
+  .settings-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+    gap:10px;
+  }
+  .settings-note{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:4px;
+    line-height:1.5;
+  }
+  #import-file{ display:none; }
+  .drive-setup{
+    font-size:12px;
+    line-height:1.6;
+    color:var(--ink);
+  }
+  .drive-setup ol{ padding-left:18px; margin:8px 0; }
+  .drive-setup code{
+    background:var(--paper-2);
+    padding:1px 5px;
+    border-radius:4px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+  }
+  #drive-status{
+    font-size:12px;
+    font-weight:600;
+    color:var(--trail-dark);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Sole Log</h1>
+    <span id="today-label"></span>
+  </header>
+
+  <div id="reminder-banner">
+    <span>You haven't logged today's walk yet.</span>
+    <button onclick="goToTab('today')">Log it</button>
+  </div>
+
+  <!-- TODAY TAB -->
+  <div class="tab-panel active" id="panel-today">
+    <section class="tag-card" id="today-card">
+      <p class="tag-title">Today's Walk</p>
+
+      <label class="field-label">Date</label>
+      <input type="date" id="entry-date">
+
+      <label class="field-label">Sneaker</label>
+      <div class="chips" id="sneaker-chips"></div>
+      <p class="empty" id="no-sneakers-msg" style="display:none;">Add a sneaker in the Sneakers tab first.</p>
+
+      <label class="field-label">Weather</label>
+      <div class="weather-row">
+        <button class="btn secondary small" id="fetch-weather-btn" onclick="fetchWeather()">Detect weather</button>
+        <select id="weather-manual" style="display:none;">
+          <option value="Clear">☀️ Clear</option>
+          <option value="Cloudy">☁️ Cloudy</option>
+          <option value="Fog">🌫️ Fog</option>
+          <option value="Rain">🌧️ Rain</option>
+          <option value="Snow">❄️ Snow</option>
+          <option value="Thunderstorm">⛈️ Thunderstorm</option>
+        </select>
+      </div>
+      <div class="weather-detected" id="weather-detected" style="display:none;"></div>
+      <button class="btn ghost small" id="edit-weather-btn" style="display:none;margin-top:6px;" onclick="toggleManualWeather()">Edit weather</button>
+
+      <label class="field-label">Note (optional)</label>
+      <input type="text" id="entry-note" placeholder="distance, route, how they felt...">
+
+      <div class="save-row">
+        <button class="btn" onclick="saveEntry()">Save today's entry</button>
+        <span class="save-msg" id="save-msg"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- SNEAKERS TAB -->
+  <div class="tab-panel" id="panel-sneakers">
+    <section>
+      <h2 class="section-title">Sneaker Collection</h2>
+      <div id="sneaker-list"></div>
+      <div class="add-sneaker-form">
+        <input type="text" id="new-sneaker-name" placeholder="e.g. Pegasus 41">
+        <button class="btn small" onclick="addSneaker()">Add</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- STATS TAB -->
+  <div class="tab-panel" id="panel-stats">
+    <section>
+      <h2 class="section-title">Stats</h2>
+      <div class="stat-grid" id="stat-grid"></div>
+    </section>
+    <section>
+      <h2 class="section-title">Rotation Breakdown</h2>
+      <div id="rotation-bars"></div>
+    </section>
+    <section>
+      <h2 class="section-title">Weather Worn In</h2>
+      <div id="weather-bars"></div>
+    </section>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab-panel" id="panel-history">
+    <section>
+      <h2 class="section-title">Full History</h2>
+      <div id="history-list"></div>
+    </section>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tab-panel" id="panel-settings">
+    <section>
+      <h2 class="section-title">Reminders</h2>
+      <div class="settings-row">
+        <span>Browser notification (only while this tab is open)</span>
+        <button class="btn ghost small" id="notif-btn" onclick="enableNotifications()">Enable</button>
+      </div>
+      <div class="settings-row">
+        <span>Reminder time</span>
+        <input type="time" id="reminder-time" value="18:00" style="width:110px;">
+      </div>
+      <div class="settings-row" style="border-bottom:none;">
+        <span>Guaranteed daily calendar reminder</span>
+        <button class="btn secondary small" onclick="downloadIcs()">Download .ics</button>
+      </div>
+      <p class="settings-note">A browser notification only fires if this tab is open in the background — phones frequently suspend it, so it's not reliable on its own. The .ics file adds a real recurring daily event to your phone's calendar app.</p>
+    </section>
+    <section>
+      <h2 class="section-title">Google Drive Backup</h2>
+      <p class="settings-note" style="margin-top:0;">Backs up straight to a "Sole Log Backups" folder in your own Drive after every save. Requires a one-time setup with your own free Google Cloud project — see instructions below.</p>
+
+      <label class="field-label">Google OAuth Client ID</label>
+      <input type="text" id="google-client-id" placeholder="xxxx.apps.googleusercontent.com">
+      <div class="save-row" style="margin-top:8px;">
+        <button class="btn secondary small" onclick="saveClientId()">Save Client ID</button>
+      </div>
+
+      <div class="settings-row" style="margin-top:10px;">
+        <span>Connection</span>
+        <button class="btn small" id="drive-connect-btn" onclick="connectDrive()" disabled>Connect</button>
+      </div>
+      <div class="settings-row">
+        <span id="drive-status">Not connected</span>
+      </div>
+      <div class="settings-row" style="border-bottom:none;">
+        <button class="btn secondary small" onclick="driveBackup(false)">Back up now</button>
+        <button class="btn ghost small" onclick="driveRestore()">Restore latest from Drive</button>
+      </div>
+
+      <details style="margin-top:12px;">
+        <summary>Setup instructions (one-time, ~5 min)</summary>
+        <div class="drive-setup">
+          <ol>
+            <li>This file needs to be hosted at a real <code>https://</code> (or <code>http://localhost</code>) address for Google sign-in to work — it won't work opened directly as a local file. Simplest free option: drop it into a new GitHub repo and enable GitHub Pages, or host it with Netlify Drop.</li>
+            <li>Go to <code>console.cloud.google.com</code>, create a project, then enable the <b>Google Drive API</b> under "APIs & Services".</li>
+            <li>Under "APIs & Services → Credentials", create an <b>OAuth Client ID</b> of type "Web application".</li>
+            <li>Add the exact URL where you're hosting this file (e.g. <code>https://yourname.github.io</code>) under "Authorized JavaScript origins".</li>
+            <li>Under "OAuth consent screen", add your own Google account as a test user (keeps it private — no Google review needed for personal use).</li>
+            <li>Copy the generated Client ID and paste it above.</li>
+          </ol>
+          <p>Since this app has no server, Google only issues a short-lived session — you may need to tap "Connect" again every so often (roughly once a day of use). Your data itself only ever leaves your device to go to your own Drive.</p>
+        </div>
+      </details>
+    </section>
+
+    <section>
+      <h2 class="section-title">Local Backup</h2>
+      <p class="settings-note" style="margin-top:0;">Works with or without Drive connected. Everything is stored only in this browser — clearing site data will erase it.</p>
+      <div class="settings-row">
+        <span>Export backup</span>
+        <button class="btn secondary small" onclick="exportData()">Download .json</button>
+      </div>
+      <div class="settings-row" style="border-bottom:none;">
+        <span>Restore from backup</span>
+        <button class="btn ghost small" onclick="document.getElementById('import-file').click()">Import .json</button>
+        <input type="file" id="import-file" accept="application/json" onchange="importData(event)">
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="tabbar">
+  <button class="active" data-tab="today" onclick="goToTab('today')">Today</button>
+  <button data-tab="sneakers" onclick="goToTab('sneakers')">Sneakers</button>
+  <button data-tab="stats" onclick="goToTab('stats')">Stats</button>
+  <button data-tab="history" onclick="goToTab('history')">History</button>
+  <button data-tab="settings" onclick="goToTab('settings')">Settings</button>
+</div>
+
+<script>
+const STORAGE_KEY_SNEAKERS = 'sole-log-sneakers-v1';
+const STORAGE_KEY_ENTRIES = 'sole-log-entries-v1';
+const STORAGE_KEY_CLIENT_ID = 'sole-log-google-client-id';
+const STORAGE_KEY_FOLDER_ID = 'sole-log-drive-folder-id';
+const STORAGE_KEY_FILE_ID = 'sole-log-drive-file-id';
+
+let sneakers = [];
+let entries = {};
+let selectedSneakerId = null;
+let detectedWeather = null;
+let notifTimer = null;
+
+let googleClientId = localStorage.getItem(STORAGE_KEY_CLIENT_ID) || '';
+let driveAccessToken = null;
+let driveFolderId = localStorage.getItem(STORAGE_KEY_FOLDER_ID) || null;
+let driveFileId = localStorage.getItem(STORAGE_KEY_FILE_ID) || null;
+let tokenClient = null;
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* ---------- Local storage persistence (standalone, no account) ---------- */
+function loadData(){
+  try{ sneakers = JSON.parse(localStorage.getItem(STORAGE_KEY_SNEAKERS) || '[]'); }
+  catch(e){ sneakers = []; }
+  try{ entries = JSON.parse(localStorage.getItem(STORAGE_KEY_ENTRIES) || '{}'); }
+  catch(e){ entries = {}; }
+  init();
+}
+function persistSneakers(){
+  try{ localStorage.setItem(STORAGE_KEY_SNEAKERS, JSON.stringify(sneakers)); }
+  catch(e){ alert('Could not save — your browser storage may be full or blocked.'); }
+}
+function persistEntries(){
+  try{ localStorage.setItem(STORAGE_KEY_ENTRIES, JSON.stringify(entries)); }
+  catch(e){ alert('Could not save — your browser storage may be full or blocked.'); }
+}
+
+/* ---------- Tabs ---------- */
+function goToTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.querySelector(`#tabbar button[data-tab="${name}"]`).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function init(){
+  document.getElementById('entry-date').value = todayStr();
+  const label = new Date();
+  document.getElementById('today-label').textContent = label.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  renderSneakerChips();
+  renderSneakerList();
+  renderReminderBanner();
+  renderStats();
+  renderRotationBars();
+  renderWeatherBars();
+  renderHistory();
+  loadExistingEntryForDate(todayStr());
+  document.getElementById('google-client-id').value = googleClientId;
+  document.getElementById('drive-connect-btn').disabled = !googleClientId;
+  if(googleClientId && window.google && google.accounts) initGoogleClient();
+}
+
+function renderReminderBanner(){
+  const banner = document.getElementById('reminder-banner');
+  if(!entries[todayStr()] && sneakers.length){
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+/* ---------- Sneakers ---------- */
+function addSneaker(){
+  const input = document.getElementById('new-sneaker-name');
+  const name = input.value.trim();
+  if(!name) return;
+  sneakers.push({ id: Date.now().toString(36), name });
+  input.value = '';
+  persistSneakers();
+  renderSneakerChips();
+  renderSneakerList();
+  renderReminderBanner();
+  maybeAutoBackup();
+}
+
+function deleteSneaker(id){
+  sneakers = sneakers.filter(s => s.id !== id);
+  persistSneakers();
+  if(selectedSneakerId === id) selectedSneakerId = null;
+  renderSneakerChips();
+  renderSneakerList();
+  renderRotationBars();
+  maybeAutoBackup();
+}
+
+function renderSneakerChips(){
+  const wrap = document.getElementById('sneaker-chips');
+  const msg = document.getElementById('no-sneakers-msg');
+  wrap.innerHTML = '';
+  if(!sneakers.length){ msg.style.display = 'block'; return; }
+  msg.style.display = 'none';
+  sneakers.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (s.id === selectedSneakerId ? ' selected' : '');
+    chip.textContent = s.name;
+    chip.onclick = () => { selectedSneakerId = s.id; renderSneakerChips(); };
+    wrap.appendChild(chip);
+  });
+}
+
+function renderSneakerList(){
+  const wrap = document.getElementById('sneaker-list');
+  wrap.innerHTML = '';
+  if(!sneakers.length){
+    wrap.innerHTML = '<p class="empty">No sneakers added yet.</p>';
+    return;
+  }
+  sneakers.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'sneaker-row';
+    row.innerHTML = `<span class="name">${escapeHtml(s.name)}</span>`;
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = 'remove';
+    del.onclick = () => deleteSneaker(s.id);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+
+/* ---------- Weather ---------- */
+const WMO = {
+  clear:[0,1], cloudy:[2,3], fog:[45,48],
+  rain:[51,53,55,56,57,61,63,65,66,67,80,81,82],
+  snow:[71,73,75,77,85,86],
+  thunder:[95,96,99]
+};
+function codeToCondition(code){
+  for(const [k,list] of Object.entries(WMO)){
+    if(list.includes(code)){
+      return {clear:'Clear',cloudy:'Cloudy',fog:'Fog',rain:'Rain',snow:'Snow',thunder:'Thunderstorm'}[k];
+    }
+  }
+  return 'Cloudy';
+}
+const CONDITION_EMOJI = { Clear:'☀️', Cloudy:'☁️', Fog:'🌫️', Rain:'🌧️', Snow:'❄️', Thunderstorm:'⛈️' };
+
+function fetchWeather(){
+  const btn = document.getElementById('fetch-weather-btn');
+  const box = document.getElementById('weather-detected');
+  if(!navigator.geolocation){
+    box.style.display='block';
+    box.textContent = 'Location not available in this browser — set weather manually.';
+    toggleManualWeather(true);
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Detecting...';
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try{
+      const { latitude, longitude } = pos.coords;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const temp = Math.round(data.current.temperature_2m);
+      const cond = codeToCondition(data.current.weather_code);
+      detectedWeather = { condition: cond, temp, source: 'auto' };
+      box.style.display = 'block';
+      box.textContent = `Detected: ${CONDITION_EMOJI[cond]} ${cond}, ${temp}°C`;
+      document.getElementById('edit-weather-btn').style.display = 'inline-block';
+      document.getElementById('weather-manual').value = cond;
+    }catch(err){
+      box.style.display = 'block';
+      box.textContent = 'Could not reach weather service — set it manually.';
+      toggleManualWeather(true);
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Detect weather';
+    }
+  }, () => {
+    box.style.display = 'block';
+    box.textContent = 'Location permission denied — set weather manually.';
+    toggleManualWeather(true);
+    btn.disabled = false;
+    btn.textContent = 'Detect weather';
+  });
+}
+
+function toggleManualWeather(forceShow){
+  const sel = document.getElementById('weather-manual');
+  sel.style.display = (forceShow || sel.style.display === 'none') ? 'inline-block' : 'none';
+}
+
+/* ---------- Entries ---------- */
+function loadExistingEntryForDate(dateStr){
+  const e = entries[dateStr];
+  document.getElementById('entry-note').value = '';
+  document.getElementById('save-msg').textContent = '';
+  document.getElementById('weather-detected').style.display = 'none';
+  document.getElementById('edit-weather-btn').style.display = 'none';
+  document.getElementById('weather-manual').style.display = 'none';
+  detectedWeather = null;
+  selectedSneakerId = null;
+  if(e){
+    selectedSneakerId = e.sneakerId;
+    document.getElementById('entry-note').value = e.note || '';
+    if(e.weather){
+      detectedWeather = e.weather;
+      const box = document.getElementById('weather-detected');
+      box.style.display = 'block';
+      box.textContent = `${CONDITION_EMOJI[e.weather.condition]||''} ${e.weather.condition}, ${e.weather.temp}°C (${e.weather.source === 'manual' ? 'manual' : 'auto-detected'})`;
+      document.getElementById('edit-weather-btn').style.display = 'inline-block';
+      document.getElementById('weather-manual').value = e.weather.condition;
+    }
+  }
+  renderSneakerChips();
+}
+
+document.getElementById('entry-date').addEventListener('change', (ev) => {
+  loadExistingEntryForDate(ev.target.value);
+});
+
+function saveEntry(){
+  const dateStr = document.getElementById('entry-date').value;
+  const msg = document.getElementById('save-msg');
+  if(!selectedSneakerId){
+    msg.style.color = '#C1622D';
+    msg.textContent = 'Pick a sneaker first.';
+    return;
+  }
+  let weather = detectedWeather;
+  const manualSelect = document.getElementById('weather-manual');
+  if(manualSelect.style.display !== 'none'){
+    weather = { condition: manualSelect.value, temp: weather ? weather.temp : null, source: 'manual' };
+  }
+  entries[dateStr] = {
+    sneakerId: selectedSneakerId,
+    note: document.getElementById('entry-note').value.trim(),
+    weather: weather || null
+  };
+  persistEntries();
+  msg.style.color = 'var(--trail-dark)';
+  msg.textContent = 'Saved.';
+  renderReminderBanner();
+  renderStats();
+  renderRotationBars();
+  renderWeatherBars();
+  renderHistory();
+  maybeAutoBackup();
+}
+
+/* ---------- Stats ---------- */
+function renderStats(){
+  const dates = Object.keys(entries).sort();
+  const totalDays = dates.length;
+  let streak = 0;
+  let cursor = new Date();
+  while(true){
+    const ds = cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0')+'-'+String(cursor.getDate()).padStart(2,'0');
+    if(entries[ds]){ streak++; cursor.setDate(cursor.getDate()-1); } else break;
+  }
+  let longest = 0, run = 0, prev = null;
+  dates.forEach(d => {
+    if(prev){
+      const diff = (new Date(d) - new Date(prev)) / 86400000;
+      run = diff === 1 ? run + 1 : 1;
+    } else { run = 1; }
+    longest = Math.max(longest, run);
+    prev = d;
+  });
+  const grid = document.getElementById('stat-grid');
+  grid.innerHTML = `
+    <div class="stat-box"><div class="num">${totalDays}</div><div class="lbl">days logged</div></div>
+    <div class="stat-box"><div class="num">${streak}</div><div class="lbl">current streak</div></div>
+    <div class="stat-box"><div class="num">${longest}</div><div class="lbl">longest streak</div></div>
+    <div class="stat-box"><div class="num">${sneakers.length}</div><div class="lbl">sneakers in rotation</div></div>
+  `;
+}
+
+function renderRotationBars(){
+  const wrap = document.getElementById('rotation-bars');
+  const dates = Object.keys(entries);
+  if(!dates.length || !sneakers.length){
+    wrap.innerHTML = '<p class="empty">No entries yet.</p>';
+    return;
+  }
+  const counts = {};
+  dates.forEach(d => { const id = entries[d].sneakerId; counts[id] = (counts[id]||0)+1; });
+  const max = Math.max(...Object.values(counts), 1);
+  wrap.innerHTML = '';
+  sneakers.slice().sort((a,b)=>(counts[b.id]||0)-(counts[a.id]||0)).forEach(s => {
+    const c = counts[s.id] || 0;
+    const lastDate = dates.filter(d => entries[d].sneakerId === s.id).sort().slice(-1)[0];
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-label">${escapeHtml(s.name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/max*100)}%"></div></div>
+      <div class="bar-val">${c}d</div>
+    `;
+    wrap.appendChild(row);
+    if(lastDate){
+      const sub = document.createElement('div');
+      sub.style.cssText = 'font-size:10.5px;color:var(--muted);margin:-4px 0 8px 96px;';
+      sub.textContent = `last worn ${lastDate}`;
+      wrap.appendChild(sub);
+    }
+  });
+}
+
+function renderWeatherBars(){
+  const wrap = document.getElementById('weather-bars');
+  const dates = Object.keys(entries).filter(d => entries[d].weather);
+  if(!dates.length){
+    wrap.innerHTML = '<p class="empty">No weather data logged yet.</p>';
+    return;
+  }
+  const counts = {};
+  dates.forEach(d => { const c = entries[d].weather.condition; counts[c] = (counts[c]||0)+1; });
+  const max = Math.max(...Object.values(counts), 1);
+  wrap.innerHTML = '';
+  Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([cond,c]) => {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-label">${CONDITION_EMOJI[cond]||''} ${cond}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/max*100)}%"></div></div>
+      <div class="bar-val">${c}d</div>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+function renderHistory(){
+  const wrap = document.getElementById('history-list');
+  const dates = Object.keys(entries).sort().reverse();
+  if(!dates.length){
+    wrap.innerHTML = '<p class="empty">Nothing logged yet.</p>';
+    return;
+  }
+  wrap.innerHTML = '';
+  dates.forEach(d => {
+    const e = entries[d];
+    const sneaker = sneakers.find(s => s.id === e.sneakerId);
+    const w = e.weather ? `${CONDITION_EMOJI[e.weather.condition]||''} ${e.weather.temp!=null ? e.weather.temp+'°C' : ''}` : '';
+    const row = document.createElement('div');
+    row.className = 'history-item';
+    row.innerHTML = `<span class="d">${d}</span><span>${sneaker ? escapeHtml(sneaker.name) : '(removed)'}</span><span>${w}</span>`;
+    wrap.appendChild(row);
+  });
+}
+
+/* ---------- Reminders ---------- */
+async function enableNotifications(){
+  if(!('Notification' in window)){
+    alert('Notifications are not supported in this browser.');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  const btn = document.getElementById('notif-btn');
+  if(perm === 'granted'){
+    btn.textContent = 'Enabled';
+    btn.disabled = true;
+    startNotifWatcher();
+  } else {
+    btn.textContent = 'Blocked';
+  }
+}
+
+function startNotifWatcher(){
+  if(notifTimer) clearInterval(notifTimer);
+  notifTimer = setInterval(() => {
+    const target = document.getElementById('reminder-time').value || '18:00';
+    const now = new Date();
+    const hhmm = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if(hhmm === target && !entries[todayStr()]){
+      new Notification('Sole Log', { body: "You haven't logged today's walk yet." });
+    }
+  }, 30000);
+}
+
+function downloadIcs(){
+  const time = (document.getElementById('reminder-time').value || '18:00').replace(':','');
+  const now = new Date();
+  const dtstamp = now.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const startDate = now.toISOString().slice(0,10).replace(/-/g,'') + 'T' + time + '00';
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Sole Log//EN',
+    'BEGIN:VEVENT',
+    'UID:sole-log-'+Date.now()+'@local',
+    'DTSTAMP:'+dtstamp,
+    'DTSTART:'+startDate,
+    'DURATION:PT10M',
+    'RRULE:FREQ=DAILY',
+    'SUMMARY:Log today\'s sneaker walk',
+    'DESCRIPTION:Open Sole Log and record which sneakers you wore today.',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sole-log-reminder.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* ---------- Backup / restore ---------- */
+function exportData(){
+  const payload = { sneakers, entries, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sole-log-backup-' + todayStr() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data.sneakers || !data.entries) throw new Error('bad format');
+      if(!confirm('This will replace your current sneakers and history with the backup file. Continue?')) return;
+      sneakers = data.sneakers;
+      entries = data.entries;
+      persistSneakers();
+      persistEntries();
+      init();
+      alert('Backup restored.');
+    }catch(e){
+      alert('Could not read that file — is it a Sole Log backup .json?');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Google Drive backup ---------- */
+function onGsiLoad(){
+  if(googleClientId) initGoogleClient();
+}
+
+function initGoogleClient(){
+  if(!googleClientId || !window.google || !google.accounts) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: googleClientId,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: (resp) => {
+      if(resp.error){
+        updateDriveStatus('Connection failed — check your Client ID and authorized origin.');
+        return;
+      }
+      driveAccessToken = resp.access_token;
+      updateDriveStatus('Connected — backing up...');
+      driveBackup(true);
+    }
+  });
+  document.getElementById('drive-connect-btn').disabled = false;
+}
+
+function saveClientId(){
+  googleClientId = document.getElementById('google-client-id').value.trim();
+  localStorage.setItem(STORAGE_KEY_CLIENT_ID, googleClientId);
+  driveFolderId = null;
+  driveFileId = null;
+  localStorage.removeItem(STORAGE_KEY_FOLDER_ID);
+  localStorage.removeItem(STORAGE_KEY_FILE_ID);
+  if(window.google && google.accounts){
+    initGoogleClient();
+    updateDriveStatus('Client ID saved — tap Connect.');
+  } else {
+    updateDriveStatus('Client ID saved — waiting for Google sign-in to load...');
+  }
+}
+
+function connectDrive(){
+  if(!tokenClient){
+    alert('Enter and save your Google Client ID first, and make sure this page is hosted at an https (or localhost) address.');
+    return;
+  }
+  tokenClient.requestAccessToken();
+}
+
+function authHeaders(){
+  return { 'Authorization': 'Bearer ' + driveAccessToken };
+}
+
+async function ensureFolderAndFile(){
+  if(!driveFolderId){
+    const q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and name='Sole Log Backups' and trashed=false");
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, { headers: authHeaders() });
+    const data = await res.json();
+    if(data.files && data.files.length){
+      driveFolderId = data.files[0].id;
+    } else {
+      const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Sole Log Backups', mimeType: 'application/vnd.google-apps.folder' })
+      });
+      const created = await createRes.json();
+      driveFolderId = created.id;
+    }
+    localStorage.setItem(STORAGE_KEY_FOLDER_ID, driveFolderId);
+  }
+  if(!driveFileId){
+    const q2 = encodeURIComponent(`name='sole-log-backup.json' and '${driveFolderId}' in parents and trashed=false`);
+    const res2 = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q2}&fields=files(id,name)`, { headers: authHeaders() });
+    const data2 = await res2.json();
+    if(data2.files && data2.files.length){
+      driveFileId = data2.files[0].id;
+    } else {
+      const createRes2 = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'sole-log-backup.json', parents: [driveFolderId] })
+      });
+      const created2 = await createRes2.json();
+      driveFileId = created2.id;
+    }
+    localStorage.setItem(STORAGE_KEY_FILE_ID, driveFileId);
+  }
+}
+
+async function driveBackup(silent){
+  if(!driveAccessToken){
+    if(!silent) alert('Connect Google Drive first.');
+    return;
+  }
+  try{
+    await ensureFolderAndFile();
+    const payload = JSON.stringify({ sneakers, entries, exportedAt: new Date().toISOString() }, null, 2);
+    const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: payload
+    });
+    if(!res.ok) throw new Error('upload failed: ' + res.status);
+    updateDriveStatus('Connected — last backup ' + new Date().toLocaleTimeString());
+  }catch(e){
+    updateDriveStatus('Backup failed — your session may have expired, tap Connect again.');
+  }
+}
+
+async function driveRestore(){
+  if(!driveAccessToken){
+    alert('Connect Google Drive first.');
+    return;
+  }
+  try{
+    await ensureFolderAndFile();
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, { headers: authHeaders() });
+    if(!res.ok) throw new Error('download failed');
+    const data = await res.json();
+    if(!data.sneakers || !data.entries) throw new Error('bad format');
+    if(!confirm('Replace current data with the version stored in Google Drive?')) return;
+    sneakers = data.sneakers;
+    entries = data.entries;
+    persistSneakers();
+    persistEntries();
+    init();
+    alert('Restored from Drive.');
+  }catch(e){
+    alert('Could not restore from Drive — your session may have expired, tap Connect again.');
+  }
+}
+
+function updateDriveStatus(text){
+  const el = document.getElementById('drive-status');
+  if(el) el.textContent = text;
+}
+
+function maybeAutoBackup(){
+  if(driveAccessToken) driveBackup(true);
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+loadData();
+</script>
+</body>
+</html>
